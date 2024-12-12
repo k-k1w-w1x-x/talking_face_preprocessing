@@ -1,7 +1,14 @@
-torch==1.11.0
-soundfile==0.10.3
-python==3.9.0 
 transformers==4.27.0
+soundfile==0.10.3.post1
 scenedetect
 opencv-python
 moviepy
+librosa
+
+
+python extract_audio_features.py ^
+  --model_path "weights\chinese-hubert-large" ^
+  --audio_dir_path ".\data_processing\specified_formats\audios\audios_16k" ^
+  --audio_feature_saved_path ".\data_processing\specified_formats\audios\hubert_features" ^
+  --computed_device "cuda" ^
+  --padding_to_align_audio True

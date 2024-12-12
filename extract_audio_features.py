@@ -19,23 +19,40 @@ def main(args):
 
     os.makedirs(args.audio_feature_saved_path, exist_ok=True)
 
-    for wavfile in tqdm(os.listdir(args.audio_dir_path)):
-        npy_save_path = os.path.join(args.audio_feature_saved_path, os.path.splitext(os.path.basename(wavfile))[0] + '.npy')
-        
-        if os.path.exists(npy_save_path):
-            continue
-
-        audio, sr = librosa.load(os.path.join(args.audio_dir_path, wavfile), sr=16000)
-        input_values = feature_extractor(audio, sampling_rate=16000, padding=True, do_normalize=True, return_tensors="pt").input_values
+    def process_audio_segment(audio_segment, feature_extractor, model, device):
+        input_values = feature_extractor(audio_segment, sampling_rate=16000, padding=True, do_normalize=True, return_tensors="pt").input_values
         input_values = input_values.to(device)
         ws_feats = []
         with torch.no_grad():
             outputs = model(input_values, output_hidden_states=True)
             for i in range(len(outputs.hidden_states)):
                 ws_feats.append(outputs.hidden_states[i].detach().cpu().numpy())
-            ws_feat_obj = np.array(ws_feats)
-            ws_feat_obj = np.squeeze(ws_feat_obj, 1)
+        return np.array(ws_feats)
 
+    for wavfile in tqdm(os.listdir(args.audio_dir_path)):
+        npy_save_path = os.path.join(args.audio_feature_saved_path, os.path.splitext(os.path.basename(wavfile))[0] + '.npy')
+        
+        if os.path.exists(npy_save_path):
+            continue
+
+        # 加载音频
+        audio, sr = librosa.load(os.path.join(args.audio_dir_path, wavfile), sr=16000)
+        
+        # 将音频分段处理，每段30秒
+        segment_length = 30 * 16000  # 30秒 * 16000采样率
+        all_features = []
+        
+        for i in range(0, len(audio), segment_length):
+            segment = audio[i:i + segment_length]
+            if len(segment) < 100:  # 跳过过短的片段
+                continue
+            segment_features = process_audio_segment(segment, feature_extractor, model, device)
+            all_features.append(segment_features)
+
+        # 合并所有特征
+        if all_features:
+            ws_feat_obj = np.concatenate([feat.squeeze(1) for feat in all_features], axis=1)
+            
             if args.padding_to_align_audio:
                 ws_feat_obj = np.pad(ws_feat_obj, ((0, 0), (0, 1), (0, 0)), 'edge')
             np.save(npy_save_path, ws_feat_obj)
