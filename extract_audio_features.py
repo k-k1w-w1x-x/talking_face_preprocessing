@@ -31,7 +31,7 @@ def main(args):
 
     for wavfile in tqdm(os.listdir(args.audio_dir_path)):
         npy_save_path = os.path.join(args.audio_feature_saved_path, os.path.splitext(os.path.basename(wavfile))[0] + '.npy')
-        
+
         if os.path.exists(npy_save_path):
             continue
 

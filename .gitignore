@@ -1,6 +1,7 @@
 weights/
 video_frames/
 data_processing/
+audio_samples/
 local_scripts
 visualized_jupyter
 .ipynb_checkpoints
